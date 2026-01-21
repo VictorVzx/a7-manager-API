@@ -21,4 +21,7 @@ public class ProductsModel {
     private String description;
     private Double price;
     private Integer quantity;
+
+    @Column(columnDefinition = "TEXT")
+    private String image_url;
 }

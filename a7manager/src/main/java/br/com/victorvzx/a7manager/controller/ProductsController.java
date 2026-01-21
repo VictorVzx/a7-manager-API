@@ -59,4 +59,14 @@ public class ProductsController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PatchMapping("/{id}/imagem")
+    public ResponseEntity<ProductsModel> updateImage(@PathVariable Long id, @RequestBody String novaUrl) {
+        return repository.findById(id)
+                .map(produto -> {
+                    produto.setImage_url(novaUrl);
+                    return ResponseEntity.ok(repository.save(produto));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
