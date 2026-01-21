@@ -10,6 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class OutletController {
     @GetMapping
     public String test() {
-        return "API funcionando";
+        return "Inicio";
     }
 }
