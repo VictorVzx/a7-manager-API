@@ -1,36 +1,69 @@
 package br.com.victorvzx.a7manager.controller;
 
 import br.com.victorvzx.a7manager.model.ClientsModel;
-import br.com.victorvzx.a7manager.model.ProductsModel;
+import br.com.victorvzx.a7manager.model.dto.ClientsDTO;
+import br.com.victorvzx.a7manager.model.dto.LoginDTO;
 import br.com.victorvzx.a7manager.repository.ClientsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/clientes")
 public class ClientsController {
+
+    @Autowired
+    private BCryptPasswordEncoder encoder;
+
     @Autowired
     private ClientsRepository repository;
 
+    @PostMapping("/login")
+    public ResponseEntity<Object> login(@RequestBody LoginDTO data) {
+        // 1. Busca o cliente
+        Optional<ClientsModel> clienteOptional = repository.findByEmail(data.email());
+
+        // 2. Se não achar o email, já para aqui
+        if (clienteOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("E-mail não cadastrado");
+        }
+
+        ClientsModel cliente = clienteOptional.get();
+
+        // 3. Se achou, confere a senha
+        if (encoder.matches(data.password(), cliente.getPassword())) {
+            // Retorna o DTO (Lembra de tirar os parênteses extras aqui!)
+            ClientsDTO dto = new ClientsDTO(cliente.getId(), cliente.getName(), cliente.getEmail());
+            return ResponseEntity.ok().body(dto);
+        }
+
+        // 4. Se a senha estiver errada
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Senha incorreta");
+    }
+
     @PostMapping
     public ResponseEntity<ClientsModel> post(@RequestBody ClientsModel cliente) {
-        // Em um sistema real, aqui você usaria um BCrypt para criptografar a senha!
+        String encryptedPassword = encoder.encode(cliente.getPassword());
+        cliente.setPassword(encryptedPassword);
         return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(cliente));
     }
 
     @GetMapping
-    public ResponseEntity<List<ClientsModel>> getAll() {
-        return ResponseEntity.ok(repository.findAll());
+    public ResponseEntity<List<ClientsDTO>> getAll() {
+        List<ClientsDTO> DTOlist = repository.findAll().stream().map(c -> new ClientsDTO(c.getId(), c.getName(), c.getEmail())).toList();
+        return ResponseEntity.ok(DTOlist);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ClientsModel> getOne(@PathVariable Long id) {
+    public ResponseEntity<ClientsDTO> getOne(@PathVariable Long id) {
+        // BUSCA UM: Se achar, converte para DTO
         return repository.findById(id)
-                .map(ResponseEntity::ok)
+                .map(c -> ResponseEntity.ok(new ClientsDTO(c.getId(), c.getName(), c.getEmail())))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -42,4 +75,7 @@ public class ClientsController {
         }
         return ResponseEntity.notFound().build();
     }
+
+
 }
+
