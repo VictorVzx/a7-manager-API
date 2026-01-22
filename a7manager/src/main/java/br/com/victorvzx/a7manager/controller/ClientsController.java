@@ -47,10 +47,27 @@ public class ClientsController {
     }
 
     @PostMapping
-    public ResponseEntity<ClientsModel> post(@RequestBody ClientsModel cliente) {
-        String encryptedPassword = encoder.encode(cliente.getPassword());
-        cliente.setPassword(encryptedPassword);
-        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(cliente));
+    public ResponseEntity<Object> registrar(@RequestBody ClientsModel cliente) {
+        // 1. Verificação básica: o email já existe?
+        if (repository.findByEmail(cliente.getEmail()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Erro: Este e-mail já está cadastrado!");
+        }
+
+        // 2. CRIPTOGRAFIA: Nunca salve a senha como ela veio do front!
+        String senhaCriptografada = encoder.encode(cliente.getPassword());
+        cliente.setPassword(senhaCriptografada);
+
+        // 3. SALVAR: O Repository guarda o hash no banco
+        ClientsModel clienteSalvo = repository.save(cliente);
+
+        // 4. RETORNO SEGURO: Usamos o DTO para não devolver a senha no JSON
+        ClientsDTO resposta = new ClientsDTO(
+                clienteSalvo.getId(),
+                clienteSalvo.getName(),
+                clienteSalvo.getEmail()
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(resposta);
     }
 
     @GetMapping
